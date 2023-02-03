@@ -5,7 +5,7 @@ from subject import Subject
 from predicate import IPredicate
 
 
-class Execution(IPredicate):
+class Execute(IPredicate):
 
     def __init__(self, subject: Subject, executes: Action, on: Subject) -> None:
         self.subject = subject
@@ -18,14 +18,31 @@ class Execution(IPredicate):
     def action(self) -> Action:
         return self.executes
 
-    def tail(self) -> Subject:
-        return self.on
+    def unwrap(self) -> List[IPredicate]:
+        return [self]
+
+    def __repr__(self) -> str:
+        return f"<EXE> {self.executes}({self.subject}, {self.on})"
+
+
+class Witness(IPredicate):
+
+    def __init__(self, subject: Subject, witnesses: Action, on: Subject) -> None:
+        self.subject = subject
+        self.witnesses = witnesses
+        self.on = on
+
+    def head(self) -> Subject:
+        return self.subject
+
+    def action(self) -> Action:
+        return self.witnesses
 
     def unwrap(self) -> List[IPredicate]:
         return [self]
 
     def __repr__(self) -> str:
-        return f"{self.executes}({self.subject}, {self.on})"
+        return f"<SEE> {self.witnesses}({self.subject}, {self.on})"
 
 
 class Conditional(IPredicate):
@@ -45,4 +62,4 @@ class Conditional(IPredicate):
         return unwrapped
 
     def __repr__(self) -> str:
-        return f"<<IF>> {self.condition} <<THEN>> {self.result}"
+        return f"<<IF> ({self.condition})> <THEN> ({self.result})>>"

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Set
+from typing import Dict, Set
 
 from action import Action
 from subject import Subject
@@ -9,58 +9,43 @@ from predicate import IPredicate
 
 class SynergyGraph:
 
-    class Node:
-
-        def __init__(self) -> None:
-            self.inputs: Set[Action] = set()
-            self.outputs: Set[IPredicate] = set()
-
-        def add_input(self, predicate: IPredicate) -> None:
-            self.inputs.add(predicate)
-
-        def add_output(self, predicate: IPredicate) -> None:
-            self.outputs.add(predicate)
-
-        def __repr__(self) -> str:
-            s = ""
-
-            s += "- IN:\n"
-            for input in self.inputs:
-                s += f"{input}\n"
-
-            s += "- OUT:\n"
-            for output in self.outputs:
-                s += f"{output}\n"
-
-            return s
-
     def __init__(self) -> None:
-        self.subjects: Dict[Subject, SynergyGraph.Node] = {}
-
-    def subject_present(self, subject: Subject) -> bool:
-        return subject in self.subjects
-
-    def get_subject_node(self, subject: Subject) -> SynergyGraph.Node:
-        return self.subjects[subject]
+        self.actions: Dict[Action, Set[IPredicate]] = {}
+        self.subjects: Dict[Subject, Set[IPredicate]] = {}
 
     def add_predicate(self, predicate: IPredicate) -> None:
+        head = predicate.head()
+        self.get_subject_outputs(head).add(predicate)
+
         for subpredicate in predicate.unwrap():
-            head = subpredicate.head()
-            tail = subpredicate.tail()
             action = subpredicate.action()
+            self.get_action_inputs(action).add(predicate)
 
-            self._get_or_create_subject_node(tail).add_input(action)
-            self._get_or_create_subject_node(head).add_output(predicate)
+    def get_action_inputs(self, action: Action) -> Set[IPredicate]:
+        if action not in self.actions:
+            self.actions[action] = set()
 
-    def _get_or_create_subject_node(self, subject: Subject) -> SynergyGraph.Node:
-        if not self.subject_present(subject):
-            self.subjects[subject] = SynergyGraph.Node()
+        return self.actions[action]
 
-        return self.get_subject_node(subject)
+    def get_subject_outputs(self, subject: Subject) -> Set[IPredicate]:
+        if subject not in self.subjects:
+            self.subjects[subject] = set()
+
+        return self.subjects[subject]
 
     def __repr__(self) -> str:
         s = ""
-        for subject, node in self.subjects.items():
-            s += f"-- {subject.name} --\n{node}\n"
+
+        s += "Graph actions\n"
+        for action, predicates in self.actions.items():
+            s += f"- {action}\n"
+            for predicate in predicates:
+                s += f"-- {predicate}\n"
+
+        s += "\nGraph subjects\n"
+        for subject, predicates in self.subjects.items():
+            s += f"- {subject}\n"
+            for predicate in predicates:
+                s += f"-- {predicate}\n"
 
         return s

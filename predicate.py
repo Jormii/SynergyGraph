@@ -14,8 +14,5 @@ class IPredicate:
     def action(self) -> Action:
         raise NotImplementedError(type(self))
 
-    def tail(self) -> Subject:
-        raise NotImplementedError(type(self))
-
     def unwrap(self) -> List[IPredicate]:
         raise NotImplementedError(type(self))
