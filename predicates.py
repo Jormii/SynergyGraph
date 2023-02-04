@@ -2,7 +2,7 @@ from typing import List
 
 from action import Action
 from subject import Subject
-from synergy_graph import IPredicate, SynergyGraph
+from synergy_graph import IPredicate, Synergy, SynergyGraph
 
 
 class Execute(IPredicate):
@@ -20,6 +20,9 @@ class Execute(IPredicate):
 
     def unwrap(self) -> List[IPredicate]:
         return [self]
+
+    def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
+        out_synergy.add(instance)
 
     def __repr__(self) -> str:
         return f"<EXE> {self.executes}({self.subject}, {self.on})"
