@@ -2,7 +2,7 @@ from typing import List
 
 from action import Action
 from subject import Subject
-from predicate import IPredicate
+from synergy_graph import IPredicate, SynergyGraph
 
 
 class Execute(IPredicate):
