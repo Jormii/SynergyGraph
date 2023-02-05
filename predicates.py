@@ -1,4 +1,4 @@
-from typing import List
+from typing import Set
 
 from action import Action
 from subject import Subject
@@ -12,14 +12,14 @@ class Execute(IPredicate):
         self.executes = executes
         self.on = on
 
-    def head(self) -> Subject:
-        return self.subject
+    def roots(self) -> Set[Subject]:
+        return {self.subject}
 
-    def action(self) -> Action:
-        return self.executes
+    def actions(self) -> Set[Action]:
+        return {self.executes}
 
-    def unwrap(self) -> List[IPredicate]:
-        return [self]
+    def tails(self) -> Set[Subject]:
+        return {self.on}
 
     def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
         out_synergy.add(instance)
@@ -35,14 +35,20 @@ class Witness(IPredicate):
         self.witnesses = witnesses
         self.on = on
 
-    def head(self) -> Subject:
-        return self.subject
+    def roots(self) -> Set[Subject]:
+        return {self.subject}
 
-    def action(self) -> Action:
-        return self.witnesses
+    def actions(self) -> Set[Action]:
+        return {self.witnesses}
 
-    def unwrap(self) -> List[IPredicate]:
-        return [self]
+    def tails(self) -> Set[Subject]:
+        return {self.on}
+
+    def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
+        inputs = graph.get_action_inputs(self.witnesses)
+        for input in inputs:
+            if not instance.predicate_present(input) and self.on in input.tails():
+                out_synergy.add(instance.copy_and_append(input))
 
     def __repr__(self) -> str:
         return f"<SEE> {self.witnesses}({self.subject}, {self.on})"
@@ -53,16 +59,6 @@ class Conditional(IPredicate):
     def __init__(self, condition: IPredicate, result: IPredicate) -> None:
         self.condition = condition
         self.result = result
-
-    def head(self) -> Subject:
-        return self.condition.head()
-
-    def unwrap(self) -> List[IPredicate]:
-        unwrapped = []
-        for predicate in [self.condition, self.result]:
-            unwrapped.extend(predicate.unwrap())
-
-        return unwrapped
 
     def __repr__(self) -> str:
         return f"<<IF> ({self.condition})> <THEN> ({self.result})>>"
