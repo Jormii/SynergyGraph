@@ -25,12 +25,17 @@ class Synergy:
 
     class Instance:
 
-        def __init__(self, predicates: Union[IPredicate, List[IPredicate]]) -> None:
+        def __init__(self, score: int, predicates: Union[IPredicate, List[IPredicate]]) -> None:
             if not isinstance(predicates, list):
                 predicates = [predicates]
 
+            self.score = score
             self.predicates: List[IPredicate] = predicates
             self.visited: Set[IPredicate] = set(self.predicates)
+
+        @staticmethod
+        def root() -> Synergy.Instance:
+            return Synergy.Instance(0, [])
 
         def root_predicate(self) -> IPredicate:
             return self.predicates[0]
@@ -41,15 +46,15 @@ class Synergy:
         def predicate_visited(self, predicate: IPredicate) -> bool:
             return predicate in self.visited
 
-        def copy_and_append(self, predicate: IPredicate) -> Synergy.Instance:
+        def copy_and_append(self, score: int, predicate: IPredicate) -> Synergy.Instance:
             predicates = list(self.predicates)
             predicates.append(predicate)
 
-            copy = Synergy.Instance(predicates)
+            copy = Synergy.Instance(self.score + score, predicates)
             return copy
 
         def __repr__(self) -> str:
-            return f"{self.predicates}"
+            return f"SCORE: {self.score:.2f}, {self.predicates}"
 
     def __init__(self) -> None:
         self.by_performer: Dict[Subject, List[Synergy.Instance]] = {}
@@ -151,8 +156,7 @@ class SynergyGraph:
 
     def predicate_synergies(self, predicate: IPredicate) -> Synergy:
         synergy = Synergy()
-        root_instance = Synergy.Instance([])
-        predicate.traverse(self, root_instance, synergy)
+        predicate.traverse(self, Synergy.Instance.root(), synergy)
 
         return synergy
 

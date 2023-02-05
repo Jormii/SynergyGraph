@@ -25,7 +25,7 @@ class Execute(IPredicate):
         if instance.predicate_visited(self):
             return
 
-        out_synergy.add(instance.copy_and_append(self))
+        out_synergy.add(instance.copy_and_append(1, self))
 
     def __repr__(self) -> str:
         return f"<EXE> {self.executes}({self.subject}, {self.on})"
@@ -51,7 +51,7 @@ class Witness(IPredicate):
         inputs = graph.get_action_inputs(self.witnesses)
         for input in inputs:
             if not instance.predicate_visited(input) and self.on in input.tails():
-                out_synergy.add(instance.copy_and_append(input))
+                out_synergy.add(instance.copy_and_append(0, input))
 
     def __repr__(self) -> str:
         return f"<SEE> {self.witnesses}({self.subject}, {self.on})"
@@ -59,9 +59,10 @@ class Witness(IPredicate):
 
 class Conditional(IPredicate):
 
-    def __init__(self, condition: IPredicate, result: IPredicate) -> None:
+    def __init__(self, condition: IPredicate, result: IPredicate, chance: float = 1) -> None:
         self.condition = condition
         self.result = result
+        self.chance = chance
 
     def roots(self) -> Set[Subject]:
         return self.condition.roots()
@@ -78,12 +79,16 @@ class Conditional(IPredicate):
     def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
         condition_synergy = Synergy()
         self.condition.traverse(
-            graph, instance.copy_and_append(self), condition_synergy)
+            graph, instance.copy_and_append(0, self), condition_synergy)
 
         assert len(condition_synergy.by_predicate) <= 1
 
         for condition_instances in condition_synergy.by_predicate.values():
             for condition_instance in condition_instances:
+                condition_score = condition_instance.score - instance.score
+                condition_instance.score -= condition_score
+                condition_instance.score += self.chance * condition_score
+
                 self.result.traverse(graph, condition_instance, out_synergy)
 
     def __repr__(self) -> str:
