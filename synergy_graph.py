@@ -52,29 +52,57 @@ class Synergy:
             return f"{self.predicates}"
 
     def __init__(self) -> None:
-        self.by_subject: Dict[Subject, List[Synergy.Instance]] = {}
+        self.by_performer: Dict[Subject, List[Synergy.Instance]] = {}
+        self.by_beneficiary: Dict[Subject, List[Synergy.Instance]] = {}
         self.by_predicate: Dict[IPredicate, List[Synergy.Instance]] = {}
 
     def add(self, instance: Synergy.Instance) -> None:
         predicate = instance.root_predicate()
 
         for root in predicate.roots():
-            if root not in self.by_subject:
-                self.by_subject[root] = []
+            if root not in self.by_performer:
+                self.by_performer[root] = []
 
-            self.by_subject[root].append(instance)
+            self.by_performer[root].append(instance)
+
+        for tail in predicate.tails():
+            if tail not in self.by_beneficiary:
+                self.by_beneficiary[tail] = []
+
+            self.by_beneficiary[tail].append(instance)
 
         if predicate not in self.by_predicate:
             self.by_predicate[predicate] = []
         self.by_predicate[predicate].append(instance)
 
     def extend(self, synergy: Synergy) -> None:
-        self.by_subject.update(synergy.by_subject)
-        self.by_predicate.update(synergy.by_predicate)
+        for subject, predicates in synergy.by_performer.items():
+            if subject not in self.by_performer:
+                self.by_performer[subject] = list(predicates)
+            else:
+                self.by_performer[subject].extend(predicates)
+
+        for subject, predicates in synergy.by_beneficiary.items():
+            if subject not in self.by_beneficiary:
+                self.by_beneficiary[subject] = list(predicates)
+            else:
+                self.by_beneficiary[subject].extend(predicates)
+
+        for predicate, predicates in synergy.by_predicate.items():
+            if predicate not in self.by_predicate:
+                self.by_predicate[predicate] = list(predicates)
+            else:
+                self.by_predicate[predicate].extend(predicates)
 
     def __repr__(self) -> str:
-        s = "Synergies by subject\n"
-        for subject, synergies in self.by_subject.items():
+        s = "Synergies by performer\n"
+        for subject, synergies in self.by_performer.items():
+            s += f"- {subject}\n"
+            for synergy in synergies:
+                s += f"-- {synergy}\n"
+
+        s += "\nSynergies by beneficiary\n"
+        for subject, synergies in self.by_beneficiary.items():
             s += f"- {subject}\n"
             for synergy in synergies:
                 s += f"-- {synergy}\n"
