@@ -8,13 +8,13 @@ from subject import Subject
 
 class IPredicate:
 
-    def head(self) -> Subject:
+    def roots(self) -> Set[Subject]:
         raise NotImplementedError(type(self))
 
-    def action(self) -> Action:
+    def actions(self) -> Set[Action]:
         raise NotImplementedError(type(self))
 
-    def unwrap(self) -> List[IPredicate]:
+    def tails(self) -> Set[Subject]:
         raise NotImplementedError(type(self))
 
     def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
@@ -64,10 +64,11 @@ class Synergy:
     def add(self, instance: Synergy.Instance) -> None:
         predicate = instance.root_predicate()
 
-        head = predicate.head()
-        if head not in self.by_subject:
-            self.by_subject[head] = []
-        self.by_subject[head].append(instance)
+        for root in predicate.roots():
+            if root not in self.by_subject:
+                self.by_subject[root] = []
+
+            self.by_subject[root].append(instance)
 
         if predicate not in self.by_predicate:
             self.by_predicate[predicate] = []
@@ -100,11 +101,10 @@ class SynergyGraph:
         self.subjects: Dict[Subject, Set[IPredicate]] = {}
 
     def add_predicate(self, predicate: IPredicate) -> None:
-        head = predicate.head()
-        self.get_subject_outputs(head).add(predicate)
+        for root in predicate.roots():
+            self.get_subject_outputs(root).add(predicate)
 
-        for subpredicate in predicate.unwrap():
-            action = subpredicate.action()
+        for action in predicate.actions():
             self.get_action_inputs(action).add(predicate)
 
     def get_action_inputs(self, action: Action) -> Set[IPredicate]:
