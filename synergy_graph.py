@@ -1,12 +1,22 @@
 from __future__ import annotations
 
+from enum import IntEnum
 from typing import Dict, List, Set, Union
 
 from action import Action
 from subject import Subject
 
 
+class SynonymFilter(IntEnum):
+    INPUT = 0
+    OUTPUT = 1
+
+
 class IPredicate:
+
+    def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
+        if not instance.predicate_visited(self):
+            self._traverse(graph, instance, out_synergy)
 
     def roots(self) -> Set[Subject]:
         raise NotImplementedError(type(self))
@@ -17,8 +27,17 @@ class IPredicate:
     def tails(self) -> Set[Subject]:
         raise NotImplementedError(type(self))
 
-    def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
         raise NotImplementedError(type(self))
+
+    def equal(self, predicate: IPredicate) -> bool:
+        raise NotImplementedError(type(self))
+
+    def __eq__(self, __o: object) -> bool:
+        if not isinstance(__o, IPredicate):
+            return False
+
+        return self.equal(__o)
 
 
 class Synergy:
@@ -123,16 +142,47 @@ class Synergy:
 
 class SynergyGraph:
 
+    class SubjectNode:
+
+        def __init__(self):
+            self.synonyms_in: Set[Subject] = set()
+            self.synonyms_out: Set[Subject] = set()
+            self.predicates: Set[IPredicate] = set()
+
     def __init__(self) -> None:
         self.actions: Dict[Action, Set[IPredicate]] = {}
-        self.subjects: Dict[Subject, Set[IPredicate]] = {}
+        self.subjects: Dict[Subject, SynergyGraph.SubjectNode] = {}
+
+    def add_synonym(self, subject: Subject, is_a: Subject) -> None:
+        if subject is not is_a:
+            self.get_subject_node(subject).synonyms_out.add(is_a)
+            self.get_subject_node(is_a).synonyms_in.add(subject)
 
     def add_predicate(self, predicate: IPredicate) -> None:
         for root in predicate.roots():
-            self.get_subject_outputs(root).add(predicate)
+            self.get_subject_node(root).predicates.add(predicate)
 
         for action in predicate.actions():
             self.get_action_inputs(action).add(predicate)
+
+    def get_synonyms(self, subject: Subject, filter: SynonymFilter) -> Set[Subject]:
+        node = self.get_subject_node(subject)
+        if filter == SynonymFilter.INPUT:
+            synonyms_src = node.synonyms_in
+        elif filter == SynonymFilter.OUTPUT:
+            synonyms_src = node.synonyms_out
+
+        synonyms: Set[Subject] = {subject}
+        queue: List[Subject] = list(synonyms_src)
+        while len(queue) != 0:
+            aka = queue.pop(0)
+            synonyms.add(aka)
+            aka_synonyms = self.get_synonyms(aka, filter)
+
+            aka_synonyms = aka_synonyms.difference(synonyms)
+            queue.extend(aka_synonyms)
+
+        return synonyms
 
     def get_action_inputs(self, action: Action) -> Set[IPredicate]:
         if action not in self.actions:
@@ -140,15 +190,15 @@ class SynergyGraph:
 
         return self.actions[action]
 
-    def get_subject_outputs(self, subject: Subject) -> Set[IPredicate]:
+    def get_subject_node(self, subject: Subject) -> SynergyGraph.SubjectNode:
         if subject not in self.subjects:
-            self.subjects[subject] = set()
+            self.subjects[subject] = SynergyGraph.SubjectNode()
 
         return self.subjects[subject]
 
     def synergies(self, subject: Subject) -> Synergy:
         synergy = Synergy()
-        for predicate in self.get_subject_outputs(subject):
+        for predicate in self.get_subject_node(subject).predicates:
             predicate_synergy = self.predicate_synergies(predicate)
             synergy.extend(predicate_synergy)
 
@@ -163,16 +213,20 @@ class SynergyGraph:
     def __repr__(self) -> str:
         s = ""
 
-        s += "Graph actions\n"
+        s += "[[[ Graph actions ]]]\n"
         for action, predicates in self.actions.items():
             s += f"- {action}\n"
             for predicate in predicates:
                 s += f"-- {predicate}\n"
 
-        s += "\nGraph subjects\n"
-        for subject, predicates in self.subjects.items():
+        s += "\n[[[ Graph subjects ]]]\n"
+        for subject, node in self.subjects.items():
             s += f"- {subject}\n"
-            for predicate in predicates:
+            s += f"- (X are {subject}): {node.synonyms_in}\n"
+            s += f"- ({subject} is X): {node.synonyms_out}\n"
+            for predicate in node.predicates:
                 s += f"-- {predicate}\n"
+
+            s += "\n"
 
         return s
