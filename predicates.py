@@ -22,7 +22,10 @@ class Execute(IPredicate):
         return {self.on}
 
     def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
-        out_synergy.add(instance)
+        if instance.predicate_visited(self):
+            return
+
+        out_synergy.add(instance.copy_and_append(self))
 
     def __repr__(self) -> str:
         return f"<EXE> {self.executes}({self.subject}, {self.on})"
@@ -42,12 +45,12 @@ class Witness(IPredicate):
         return {self.witnesses}
 
     def tails(self) -> Set[Subject]:
-        return {self.on}
+        return set()
 
     def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
         inputs = graph.get_action_inputs(self.witnesses)
         for input in inputs:
-            if not instance.predicate_present(input) and self.on in input.tails():
+            if not instance.predicate_visited(input) and self.on in input.tails():
                 out_synergy.add(instance.copy_and_append(input))
 
     def __repr__(self) -> str:
@@ -59,6 +62,29 @@ class Conditional(IPredicate):
     def __init__(self, condition: IPredicate, result: IPredicate) -> None:
         self.condition = condition
         self.result = result
+
+    def roots(self) -> Set[Subject]:
+        return self.condition.roots()
+
+    def actions(self) -> Set[Action]:
+        c_actions = self.condition.actions()
+        r_actions = self.result.actions()
+
+        return c_actions.union(r_actions)
+
+    def tails(self) -> Set[Subject]:
+        return self.result.tails()
+
+    def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
+        condition_synergy = Synergy()
+        self.condition.traverse(
+            graph, instance.copy_and_append(self), condition_synergy)
+
+        assert len(condition_synergy.by_predicate) <= 1
+
+        for condition_instances in condition_synergy.by_predicate.values():
+            for condition_instance in condition_instances:
+                self.result.traverse(graph, condition_instance, out_synergy)
 
     def __repr__(self) -> str:
         return f"<<IF> ({self.condition})> <THEN> ({self.result})>>"

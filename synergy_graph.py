@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Union
 
 from action import Action
 from subject import Subject
@@ -25,9 +25,12 @@ class Synergy:
 
     class Instance:
 
-        def __init__(self, predicate: IPredicate) -> None:
-            self.visited: Set[IPredicate] = {predicate}
-            self.predicates: List[IPredicate] = [predicate]
+        def __init__(self, predicates: Union[IPredicate, List[IPredicate]]) -> None:
+            if not isinstance(predicates, list):
+                predicates = [predicates]
+
+            self.predicates: List[IPredicate] = predicates
+            self.visited: Set[IPredicate] = set(self.predicates)
 
         def root_predicate(self) -> IPredicate:
             return self.predicates[0]
@@ -35,23 +38,14 @@ class Synergy:
         def tail_predicate(self) -> IPredicate:
             return self.predicates[-1]
 
-        def predicate_present(self, predicate: IPredicate) -> bool:
+        def predicate_visited(self, predicate: IPredicate) -> bool:
             return predicate in self.visited
 
-        def copy_and_replace_with(self, predicate: IPredicate) -> Synergy.Instance:
-            copy = Synergy.Instance(predicate)
-            copy.visited.update(self.visited)
-
-            return copy
-
         def copy_and_append(self, predicate: IPredicate) -> Synergy.Instance:
-            copy = Synergy.Instance(self.root_predicate())
+            predicates = list(self.predicates)
+            predicates.append(predicate)
 
-            copy.visited.add(predicate)
-
-            copy.predicates.extend(self.predicates[1:])
-            copy.predicates.append(predicate)
-
+            copy = Synergy.Instance(predicates)
             return copy
 
         def __repr__(self) -> str:
@@ -129,7 +123,7 @@ class SynergyGraph:
 
     def predicate_synergies(self, predicate: IPredicate) -> Synergy:
         synergy = Synergy()
-        root_instance = Synergy.Instance(predicate)
+        root_instance = Synergy.Instance([])
         predicate.traverse(self, root_instance, synergy)
 
         return synergy
