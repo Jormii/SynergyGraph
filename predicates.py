@@ -8,35 +8,11 @@ from subject import Subject
 from synergy_graph import IPredicate, SynonymFilter, Synergy, SynergyGraph
 
 
-# TODO: Somewhat messy
-class Equivalent(IPredicate):
-
-    def __init__(self, original: IPredicate, equivalent: IPredicate) -> None:
-        self.original = original
-        self.equivalent = equivalent
-
-    def roots(self) -> Set[Subject]:
-        return self.equivalent.roots()
-
-    def tails(self) -> Set[Subject]:
-        return self.equivalent.tails()
-
-    def equal(self, predicate: Equivalent) -> bool:
-        return self.original == predicate.original
-
-    def __hash__(self) -> int:
-        return hash(self.original)
-
-    def __repr__(self) -> str:
-        if self.original == self.equivalent:
-            return repr(self.original)
-        else:
-            return f"<EQ> ({self.equivalent}) <=== ({self.original})"
-
-
 class Execute(IPredicate):
 
     def __init__(self, subject: Subject, executes: Action, on: Subject) -> None:
+        super().__init__()
+
         self.subject = subject
         self.executes = executes
         self.on = on
@@ -53,20 +29,23 @@ class Execute(IPredicate):
     def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
         synonyms = graph.get_synonyms(self.on, SynonymFilter.OUTPUT)
         for synonym in synonyms:
-            predicate = Equivalent(
-                self, Execute(self.subject, self.executes, synonym))
+            predicate = self.derivative(
+                Execute(self.subject, self.executes, synonym))
             out_synergy.add(instance.copy_and_append(1, predicate))
 
-    def equal(self, predicate: Execute) -> bool:
-        return self.subject == predicate.subject and \
-            self.executes == predicate.executes and \
-            self.on == predicate.on
+    def stringify(self) -> str:
+        return f"<EXE> {self.executes}({self.subject}, {self.on})"
+
+    def __eq__(self, __o: object) -> bool:
+        if not isinstance(__o, Execute):
+            return False
+
+        return self.subject == __o.subject and \
+            self.executes == __o.executes and \
+            self.on == __o.on
 
     def __hash__(self) -> int:
         return hash((self.subject, self.executes, self.on))
-
-    def __repr__(self) -> str:
-        return f"<EXE> {self.executes}({self.subject}, {self.on})"
 
 
 class Witness(IPredicate):

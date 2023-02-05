@@ -14,6 +14,15 @@ class SynonymFilter(IntEnum):
 
 class IPredicate:
 
+    def __init__(self) -> None:
+        self.derived_from: IPredicate = None
+
+    def derivative(self, predicate: IPredicate) -> IPredicate:
+        if type(self) == type(predicate) and self != predicate:
+            predicate.derived_from = self
+
+        return predicate
+
     def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
         if not instance.predicate_visited(self):
             self._traverse(graph, instance, out_synergy)
@@ -30,14 +39,15 @@ class IPredicate:
     def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
         raise NotImplementedError(type(self))
 
-    def equal(self, predicate: IPredicate) -> bool:
+    def stringify(self) -> str:
         raise NotImplementedError(type(self))
 
-    def __eq__(self, __o: object) -> bool:
-        if not isinstance(__o, IPredicate):
-            return False
+    def __repr__(self) -> str:
+        s = self.stringify()
+        if self.derived_from is not None:
+            s = f"{s} <<DF> ({self.derived_from})>"
 
-        return self.equal(__o)
+        return s
 
 
 class Synergy:
@@ -73,7 +83,13 @@ class Synergy:
             return copy
 
         def __repr__(self) -> str:
-            return f"SCORE: {self.score:.2f}, {self.predicates}"
+            s = f"SCORE: {self.score:.2f}, [\n"
+            for predicate in self.predicates:
+                s += f"\t{predicate}\n"
+
+            s += "]"
+
+            return s
 
     def __init__(self) -> None:
         self.by_performer: Dict[Subject, List[Synergy.Instance]] = {}
