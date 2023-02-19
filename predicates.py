@@ -11,6 +11,8 @@ from synergy_graph import IPredicate, SynonymFilter, Synergy, SynergyGraph
 class Chain(IPredicate):
 
     def __init__(self, predicates: List[IPredicate]) -> None:
+        super().__init__()
+
         self.predicates = predicates
 
     def roots(self) -> Set[Subject]:
@@ -27,11 +29,11 @@ class Chain(IPredicate):
 
         return actions
 
-    def __repr__(self) -> str:
-        s = f"<<CHAIN> [\n"
+    def _stringify(self, indentation: int = 0) -> str:
+        s = (indentation * "\t") + f"<<CHAIN> [\n"
         for predicate in self.predicates:
-            s += f"{predicate}\n"
-        s += "]>"
+            s += f"{predicate.stringify(indentation + 1)}\n"
+        s += (indentation * "\t") + "]>"
 
         return s
 
@@ -61,8 +63,8 @@ class Execute(IPredicate):
                 Execute(self.subject, self.executes, synonym))
             out_synergy.add(instance.copy_and_append(1, predicate))
 
-    def stringify(self) -> str:
-        return f"<EXE> {self.executes}({self.subject}, {self.on})"
+    def _stringify(self, indentation: int) -> str:
+        return (indentation * "\t") + f"<EXE> {self.executes}({self.subject}, {self.on})"
 
     def __eq__(self, __o: object) -> bool:
         if not isinstance(__o, Execute):
@@ -79,6 +81,8 @@ class Execute(IPredicate):
 class Witness(IPredicate):
 
     def __init__(self, subject: Subject, witnesses: Action, on: Subject) -> None:
+        super().__init__()
+
         self.subject = subject
         self.witnesses = witnesses
         self.on = on
@@ -98,6 +102,9 @@ class Witness(IPredicate):
             if not instance.predicate_visited(input) and self.on in input.tails():
                 out_synergy.add(instance.copy_and_append(0, input))
 
+    def _stringify(self, indentation: int) -> str:
+        return (indentation * "\t") + f"<SEE> {self.witnesses}({self.subject}, {self.on})"
+
     def equal(self, predicate: Witness) -> bool:
         return self.subject == predicate.subject and \
             self.witnesses == predicate.witnesses and \
@@ -106,15 +113,14 @@ class Witness(IPredicate):
     def __hash__(self) -> int:
         return hash((self.subject, self.witnesses, self.on))
 
-    def __repr__(self) -> str:
-        return f"<SEE> {self.witnesses}({self.subject}, {self.on})"
-
 
 class Multiplier(IPredicate):
 
     def __init__(self, predicate: IPredicate, factor: float = 1) -> None:
+        super().__init__()
+
         self.predicate = predicate
-        self.chance = factor
+        self.factor = factor
 
     def roots(self) -> Set[Subject]:
         return self.predicate.roots()
@@ -124,18 +130,28 @@ class Multiplier(IPredicate):
 
     def equal(self, predicate: Multiplier) -> bool:
         return self.predicate == predicate.predicate and \
-            math.isclose(self.chance, predicate.chance)
+            math.isclose(self.factor, predicate.factor)
+
+    def _stringify(self, indentation: int) -> str:
+        s = (indentation * "\t") + \
+            f"{self.factor:.2f} * {self.predicate.stringify(0)}"
+
+        s = (indentation * "\t") + "<<MULT>\n"
+        s += ((indentation + 1) * "\t") + f"{self.factor:.2f}x\n"
+        s += f"{self.predicate.stringify(indentation + 1)}\n"
+        s += (indentation * "\t") + ">"
+
+        return s
 
     def __hash__(self) -> int:
-        return hash((self.predicate, self.chance))
-
-    def __repr__(self) -> str:
-        return f"<RANDOM ({self.chance:.3f})> ({self.predicate})>"
+        return hash((self.predicate, self.factor))
 
 
 class Conditional(IPredicate):
 
     def __init__(self, condition: IPredicate, result: IPredicate) -> None:
+        super().__init__()
+
         self.condition = condition
         self.result = result
 
@@ -162,12 +178,18 @@ class Conditional(IPredicate):
             for condition_instance in condition_instances:
                 self.result.traverse(graph, condition_instance, out_synergy)
 
+    def _stringify(self, indentation: int) -> str:
+        s = (indentation * "\t") + "<<IF>\n"
+        s += f"{self.condition.stringify(indentation + 1)}\n"
+        s += (indentation * "\t") + "<THEN>\n"
+        s += f"{self.result.stringify(indentation + 1)}\n"
+        s += (indentation * "\t") + ">"
+
+        return s
+
     def equal(self, predicate: Conditional) -> bool:
         return self.condition == predicate.condition and \
             self.result == predicate.result
 
     def __hash__(self) -> int:
         return hash((self.condition, self.result))
-
-    def __repr__(self) -> str:
-        return f"<<IF> ({self.condition})> <THEN> ({self.result})>>"

@@ -27,6 +27,13 @@ class IPredicate:
         if not instance.predicate_visited(self):
             self._traverse(graph, instance, out_synergy)
 
+    def stringify(self, indentation: int):
+        s = self._stringify(indentation)
+        if self.derived_from is not None:
+            s = f"{s} <<DF> ({self.derived_from.stringify(indentation)})>"
+
+        return s
+
     def roots(self) -> Set[Subject]:
         raise NotImplementedError(type(self))
 
@@ -39,15 +46,11 @@ class IPredicate:
     def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
         raise NotImplementedError(type(self))
 
-    def stringify(self) -> str:
+    def _stringify(self, indentation: int) -> str:
         raise NotImplementedError(type(self))
 
     def __repr__(self) -> str:
-        s = self.stringify()
-        if self.derived_from is not None:
-            s = f"{s} <<DF> ({self.derived_from})>"
-
-        return s
+        return self.stringify(0)
 
 
 class Synergy:
