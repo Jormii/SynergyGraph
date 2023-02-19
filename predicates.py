@@ -82,12 +82,34 @@ class Witness(IPredicate):
         return f"<SEE> {self.witnesses}({self.subject}, {self.on})"
 
 
+class Random(IPredicate):
+
+    def __init__(self, predicate: IPredicate, chance: float = 1) -> None:
+        self.predicate = predicate
+        self.chance = chance
+
+    def roots(self) -> Set[Subject]:
+        return self.predicate.roots()
+
+    def actions(self) -> Set[Action]:
+        return self.predicate.actions()
+
+    def equal(self, predicate: Random) -> bool:
+        return self.predicate == predicate.predicate and \
+            math.isclose(self.chance, predicate.chance)
+
+    def __hash__(self) -> int:
+        return hash((self.predicate, self.chance))
+
+    def __repr__(self) -> str:
+        return f"<RANDOM ({self.chance:.3f})> ({self.predicate})>"
+
+
 class Conditional(IPredicate):
 
-    def __init__(self, condition: IPredicate, result: IPredicate, chance: float = 1) -> None:
+    def __init__(self, condition: IPredicate, result: IPredicate) -> None:
         self.condition = condition
         self.result = result
-        self.chance = chance
 
     def roots(self) -> Set[Subject]:
         return self.condition.roots()
@@ -110,19 +132,14 @@ class Conditional(IPredicate):
 
         for condition_instances in condition_synergy.by_predicate.values():
             for condition_instance in condition_instances:
-                condition_score = condition_instance.score - instance.score
-                condition_instance.score -= condition_score
-                condition_instance.score += self.chance * condition_score
-
                 self.result.traverse(graph, condition_instance, out_synergy)
 
     def equal(self, predicate: Conditional) -> bool:
         return self.condition == predicate.condition and \
-            self.result == predicate.result and \
-            math.isclose(self.chance, predicate.chance)
+            self.result == predicate.result
 
     def __hash__(self) -> int:
-        return hash((self.condition, self.result, self.chance))
+        return hash((self.condition, self.result))
 
     def __repr__(self) -> str:
         return f"<<IF> ({self.condition})> <THEN> ({self.result})>>"
