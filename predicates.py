@@ -1,11 +1,39 @@
 from __future__ import annotations
 
 import math
-from typing import Set
+from typing import List, Set
 
 from action import Action
 from subject import Subject
 from synergy_graph import IPredicate, SynonymFilter, Synergy, SynergyGraph
+
+
+class Chain(IPredicate):
+
+    def __init__(self, predicates: List[IPredicate]) -> None:
+        self.predicates = predicates
+
+    def roots(self) -> Set[Subject]:
+        roots: Set[Subject] = set()
+        for predicate in self.predicates:
+            roots.update(predicate.roots())
+
+        return roots
+
+    def actions(self) -> Set[Action]:
+        actions: Set[Action] = set()
+        for predicate in self.predicates:
+            actions.update(predicate.actions())
+
+        return actions
+
+    def __repr__(self) -> str:
+        s = f"<<CHAIN> [\n"
+        for predicate in self.predicates:
+            s += f"{predicate}\n"
+        s += "]>"
+
+        return s
 
 
 class Execute(IPredicate):
@@ -82,11 +110,11 @@ class Witness(IPredicate):
         return f"<SEE> {self.witnesses}({self.subject}, {self.on})"
 
 
-class Random(IPredicate):
+class Multiplier(IPredicate):
 
-    def __init__(self, predicate: IPredicate, chance: float = 1) -> None:
+    def __init__(self, predicate: IPredicate, factor: float = 1) -> None:
         self.predicate = predicate
-        self.chance = chance
+        self.chance = factor
 
     def roots(self) -> Set[Subject]:
         return self.predicate.roots()
@@ -94,7 +122,7 @@ class Random(IPredicate):
     def actions(self) -> Set[Action]:
         return self.predicate.actions()
 
-    def equal(self, predicate: Random) -> bool:
+    def equal(self, predicate: Multiplier) -> bool:
         return self.predicate == predicate.predicate and \
             math.isclose(self.chance, predicate.chance)
 
