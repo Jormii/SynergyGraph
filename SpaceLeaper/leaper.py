@@ -6,10 +6,6 @@ from subject import Subject, SubjectTag
 
 class Leaper(Subject):
 
-    class Damage(Enum):
-        PHYSICAL = auto()
-        ENERGY = auto()
-
     def __init__(self, name: str) -> None:
         super().__init__(name, SubjectTag.CHARACTER)
 

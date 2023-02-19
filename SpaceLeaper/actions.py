@@ -2,11 +2,12 @@ from action import Action
 from SpaceLeaper.leaper import Leaper
 
 
-class DealDamage(Action):
+DEAL_PHYSICAL_DMG = Action("DealPhysicalDMG")
+DEAL_ENERGY_DMG = Action("DealEnergyDMG")
 
-    def __init__(self, damage: Leaper.Damage) -> None:
-        super().__init__(f"Deal {damage.name} DMG")
+ATK_INCREASE = Action("ATKIncrease")
+CRIT_CHANCE_INCREASE = Action("CritChanceIncrease")
 
-
-DEAL_PHYSICAL_DMG = DealDamage(Leaper.Damage.PHYSICAL)
-DEAL_ENERGY_DMG = DealDamage(Leaper.Damage.ENERGY)
+HEAL = Action("Heal")
+TIME_PASS = Action("TimePassed")
+MISSING_HEALTH = Action("MissingHealth")
