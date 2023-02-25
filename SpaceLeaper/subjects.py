@@ -4,6 +4,9 @@ from synergy_graph import SynergyGraph
 from subject import Subject, SubjectTag
 from SpaceLeaper.leaper import Leaper
 from SpaceLeaper.Leapers import (
+    # Wind
+    grimes,
+    
     # Order
     latika,
 
@@ -16,6 +19,7 @@ ENEMY = Subject("Enemy", SubjectTag.ANY)
 ENEMIES = Subject("Enemies", SubjectTag.ANY)
 ENEMIES_MELEE_RANGE = Subject("EnemiesInMeleeRange", SubjectTag.ANY)
 
+GRIMES = grimes.Grimes()
 LATIKA = latika.Latika()
 DORANANA = doranana.Doranana()
 
@@ -28,6 +32,7 @@ def create_synergy_graph() -> SynergyGraph:
 
     # Leapers
     leapers: List[Leaper] = [
+        GRIMES,
         LATIKA,
         DORANANA
     ]

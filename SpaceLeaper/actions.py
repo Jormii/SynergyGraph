@@ -6,8 +6,10 @@ DEAL_ENERGY_DMG = Action("DealEnergyDMG")
 
 ATK_INCREASE = Action("ATKIncrease")
 ATK_SPEED_INCREASE = Action("ATKSpeedIncrease")
+CRIT_DMG_INCREASE = Action("CritDMGIncrease")
 CRIT_CHANCE_INCREASE = Action("CritChanceIncrease")
 
+ENERGY_GAIN = Action("EnergyGain")
 ENERGY_CRYSTAL_GAIN = Action("EnergyCrystalGain")
 
 HEAL = Action("Heal")
