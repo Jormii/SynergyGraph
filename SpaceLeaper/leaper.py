@@ -1,11 +1,8 @@
+from subject import Subject
 from synergy_graph import SynergyGraph
-from subject import Subject, SubjectTag
 
 
 class Leaper(Subject):
-
-    def __init__(self, name: str) -> None:
-        super().__init__(name, SubjectTag.CHARACTER)
 
     def add_to_graph(self, graph: SynergyGraph, add_ex_skills: bool = False) -> None:
         self._add_basic_attack(graph)

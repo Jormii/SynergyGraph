@@ -1,12 +1,19 @@
 from typing import List
 
+from subject import Subject
 from synergy_graph import SynergyGraph
-from subject import Subject, SubjectTag
 from SpaceLeaper.leaper import Leaper
 from SpaceLeaper.Leapers import (
+    # Stone
+    jade,
+
+    # Liquid
+
+    # Flame
+
     # Wind
     grimes,
-    
+
     # Order
     latika,
 
@@ -14,17 +21,20 @@ from SpaceLeaper.Leapers import (
     doranana
 )
 
-ALLY = Subject("Ally", SubjectTag.ANY)
-ENEMY = Subject("Enemy", SubjectTag.ANY)
-ENEMIES = Subject("Enemies", SubjectTag.ANY)
-ENEMIES_MELEE_RANGE = Subject("EnemiesInMeleeRange", SubjectTag.ANY)
+ALLY = Subject("Ally")
+ENEMY = Subject("Enemy")
+ENEMIES = Subject("Enemies")
+ENEMIES_MELEE_RANGE = Subject("EnemiesInMeleeRange")
 
+HUNTER = Subject("Hunter")
+
+JADE = jade.Jade()
 GRIMES = grimes.Grimes()
 LATIKA = latika.Latika()
 DORANANA = doranana.Doranana()
 
 # Pets
-LULU = Subject("Lulu", SubjectTag.ANY)
+LULU = Subject("Lulu")
 
 
 def create_synergy_graph() -> SynergyGraph:
@@ -32,6 +42,7 @@ def create_synergy_graph() -> SynergyGraph:
 
     # Leapers
     leapers: List[Leaper] = [
+        JADE,
         GRIMES,
         LATIKA,
         DORANANA
