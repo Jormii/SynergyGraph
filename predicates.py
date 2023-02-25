@@ -38,7 +38,10 @@ class Chain(IPredicate):
 
     def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
         tmp: List[Synergy.Instance] = []
-        new_instances: List[Synergy.Instance] = [instance]
+        new_instances: List[Synergy.Instance] = [
+            instance.copy_and_append(self, increment_score=False)
+        ]
+
         for predicate in self.predicates:
             tmp = list(new_instances)
             new_instances.clear()
@@ -54,6 +57,44 @@ class Chain(IPredicate):
         for predicate in self.predicates:
             s += f"{predicate.stringify(indentation + 1)}\n"
         s += (indentation * "\t") + "]>"
+
+        return s
+
+
+class Repeat(IPredicate):
+
+    def __init__(self, predicate: IPredicate, times: int, annotation: str = "") -> None:
+        super().__init__(annotation)
+
+        self.predicate = predicate
+        self.times = times
+
+    def roots(self) -> Set[Subject]:
+        return self.predicate.roots()
+
+    def actions(self) -> Set[Action]:
+        return self.predicate.actions()
+
+    def tails(self) -> Set[Subject]:
+        return self.predicate.tails()
+
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
+        new_instances = self.predicate.traverse(
+            graph,
+            instance.copy_and_append(self, increment_score=False),
+            out_synergy
+        )
+
+        for new_instance in new_instances:
+            new_instance.score *= self.times
+
+        return new_instances
+
+    def _stringify(self, indentation: int) -> str:
+        s = (indentation * "\t") + "<<REPEAT>\n"
+        s += ((indentation + 1) * "\t") + f"{self.times:.2f} TIMES \n"
+        s += f"{self.predicate.stringify(indentation + 1)}\n"
+        s += (indentation * "\t") + ">"
 
         return s
 
@@ -170,9 +211,6 @@ class Multiplier(IPredicate):
         return new_instances
 
     def _stringify(self, indentation: int) -> str:
-        s = (indentation * "\t") + \
-            f"{self.factor:.2f} * {self.predicate.stringify(0)}"
-
         s = (indentation * "\t") + "<<MULT>\n"
         s += ((indentation + 1) * "\t") + f"{self.factor:.2f}x\n"
         s += f"{self.predicate.stringify(indentation + 1)}\n"

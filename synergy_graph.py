@@ -14,7 +14,7 @@ class SynonymFilter(IntEnum):
 
 class IPredicate:
 
-    def __init__(self, annotation) -> None:
+    def __init__(self, annotation: str) -> None:
         self.annontation = annotation
         self.derived_from: IPredicate = None
 
@@ -198,9 +198,9 @@ class SynergyGraph:
     def get_synonyms(self, subject: Subject, filter: SynonymFilter) -> Set[Subject]:
         node = self.get_subject_node(subject)
         if filter == SynonymFilter.IS:
-            synonyms_src = node.synonyms_in
-        elif filter == SynonymFilter.OTHERS_ARE:
             synonyms_src = node.synonyms_out
+        elif filter == SynonymFilter.OTHERS_ARE:
+            synonyms_src = node.synonyms_in
 
         synonyms: Set[Subject] = {subject}
         queue: List[Subject] = list(synonyms_src)
