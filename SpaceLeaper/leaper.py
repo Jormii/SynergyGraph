@@ -1,5 +1,3 @@
-from enum import Enum, auto
-
 from synergy_graph import SynergyGraph
 from subject import Subject, SubjectTag
 

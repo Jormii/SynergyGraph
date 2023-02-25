@@ -10,8 +10,8 @@ from synergy_graph import IPredicate, SynonymFilter, Synergy, SynergyGraph
 
 class Chain(IPredicate):
 
-    def __init__(self, predicates: List[IPredicate]) -> None:
-        super().__init__()
+    def __init__(self, predicates: List[IPredicate], annotation: str = "") -> None:
+        super().__init__(annotation)
 
         self.predicates = predicates
 
@@ -60,8 +60,8 @@ class Chain(IPredicate):
 
 class Execute(IPredicate):
 
-    def __init__(self, subject: Subject, executes: Action, on: Subject) -> None:
-        super().__init__()
+    def __init__(self, subject: Subject, executes: Action, on: Subject, annotation: str = "") -> None:
+        super().__init__(annotation)
 
         self.subject = subject
         self.executes = executes
@@ -103,8 +103,8 @@ class Execute(IPredicate):
 
 class Witness(IPredicate):
 
-    def __init__(self, subject: Subject, witnesses: Action, on: Subject) -> None:
-        super().__init__()
+    def __init__(self, subject: Subject, witnesses: Action, on: Subject, annotation: str = "") -> None:
+        super().__init__(annotation)
 
         self.subject = subject
         self.witnesses = witnesses
@@ -143,8 +143,8 @@ class Witness(IPredicate):
 
 class Multiplier(IPredicate):
 
-    def __init__(self, predicate: IPredicate, factor: float = 1) -> None:
-        super().__init__()
+    def __init__(self, predicate: IPredicate, factor: float = 1, annotation: str = "") -> None:
+        super().__init__(annotation)
 
         self.predicate = predicate
         self.factor = factor
@@ -186,8 +186,8 @@ class Multiplier(IPredicate):
 
 class Conditional(IPredicate):
 
-    def __init__(self, condition: IPredicate, result: IPredicate) -> None:
-        super().__init__()
+    def __init__(self, condition: IPredicate, result: IPredicate, annotation: str = "") -> None:
+        super().__init__(annotation)
 
         self.condition = condition
         self.result = result

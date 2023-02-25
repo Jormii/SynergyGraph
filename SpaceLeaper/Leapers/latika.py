@@ -14,7 +14,8 @@ class Latika(Leaper):
     def _add_basic_attack(self, graph: SynergyGraph) -> None:
         graph.add_predicate(Multiplier(
             Execute(self, sl_actions.DEAL_ENERGY_DMG, sl_subjects.ENEMY),
-            factor=0.9
+            factor=0.9,
+            annotation="Latika's basic attacks deal 90% Energy DMG"
         ))
 
     def _add_talent(self, graph: SynergyGraph) -> None:

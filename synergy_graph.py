@@ -14,7 +14,8 @@ class SynonymFilter(IntEnum):
 
 class IPredicate:
 
-    def __init__(self) -> None:
+    def __init__(self, annotation) -> None:
+        self.annontation = annotation
         self.derived_from: IPredicate = None
 
     def derivative(self, predicate: IPredicate) -> IPredicate:
@@ -34,9 +35,13 @@ class IPredicate:
         return new_instances
 
     def stringify(self, indentation: int):
-        s = self._stringify(indentation)
+        s = ""
+        if len(self.annontation) != 0:
+            s += (indentation * "\t") + f"\"{self.annontation}\"\n"
+
+        s += self._stringify(indentation)
         if self.derived_from is not None:
-            s = f"{s} (<DF> {self.derived_from.stringify(indentation)})"
+            s += f"(<DF> {self.derived_from.stringify(indentation)})"
 
         return s
 
