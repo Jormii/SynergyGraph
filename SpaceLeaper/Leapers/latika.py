@@ -19,7 +19,7 @@ class Latika(Leaper):
 
     def _add_talent(self, graph: SynergyGraph) -> None:
         graph.add_predicate(Multiplier(
-            Execute(self, sl_actions, sl_subjects.ENEMY),
+            Execute(self, sl_actions.DEAL_ENERGY_DMG, sl_subjects.ENEMY),
             factor=0.5 * 1.25
         ))
 
