@@ -29,6 +29,26 @@ class Chain(IPredicate):
 
         return actions
 
+    def tails(self) -> Set[Subject]:
+        tails: Set[Subject] = set()
+        for predicate in self.predicates:
+            tails.update(predicate.tails())
+
+        return tails
+
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
+        tmp: List[Synergy.Instance] = []
+        new_instances: List[Synergy.Instance] = [instance]
+        for predicate in self.predicates:
+            tmp = list(new_instances)
+            new_instances.clear()
+
+            for new_instance in tmp:
+                new_instances.extend(
+                    predicate.traverse(graph, new_instance, out_synergy))
+
+        return new_instances
+
     def _stringify(self, indentation: int = 0) -> str:
         s = (indentation * "\t") + f"<<CHAIN> [\n"
         for predicate in self.predicates:
@@ -56,12 +76,15 @@ class Execute(IPredicate):
     def tails(self) -> Set[Subject]:
         return {self.on}
 
-    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
-        synonyms = graph.get_synonyms(self.on, SynonymFilter.OUTPUT)
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
+        new_instances: List[Synergy.Instance] = []
+        synonyms = graph.get_synonyms(self.on, SynonymFilter.IS)
         for synonym in synonyms:
             predicate = self.derivative(
                 Execute(self.subject, self.executes, synonym))
-            out_synergy.add(instance.copy_and_append(1, predicate))
+            new_instances.append(instance.copy_and_append(predicate))
+
+        return new_instances
 
     def _stringify(self, indentation: int) -> str:
         return (indentation * "\t") + f"<EXE> {self.executes}({self.subject}, {self.on})"
@@ -96,11 +119,15 @@ class Witness(IPredicate):
     def tails(self) -> Set[Subject]:
         return set()
 
-    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
+        new_instances: List[Synergy.Instance] = []
         inputs = graph.get_action_inputs(self.witnesses)
         for input in inputs:
             if not instance.predicate_visited(input) and self.on in input.tails():
-                out_synergy.add(instance.copy_and_append(0, input))
+                new_instances.append(
+                    instance.copy_and_append(input, increment_score=False))
+
+        return new_instances
 
     def _stringify(self, indentation: int) -> str:
         return (indentation * "\t") + f"<SEE> {self.witnesses}({self.subject}, {self.on})"
@@ -128,9 +155,19 @@ class Multiplier(IPredicate):
     def actions(self) -> Set[Action]:
         return self.predicate.actions()
 
+    def tails(self) -> Set[Subject]:
+        return self.predicate.tails()
+
     def equal(self, predicate: Multiplier) -> bool:
         return self.predicate == predicate.predicate and \
             math.isclose(self.factor, predicate.factor)
+
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
+        new_instances = self.predicate.traverse(graph, instance, out_synergy)
+        for new_instance in new_instances:
+            new_instance.score *= self.factor
+
+        return new_instances
 
     def _stringify(self, indentation: int) -> str:
         s = (indentation * "\t") + \
@@ -167,16 +204,20 @@ class Conditional(IPredicate):
     def tails(self) -> Set[Subject]:
         return self.result.tails()
 
-    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
         condition_synergy = Synergy()
         self.condition.traverse(
-            graph, instance.copy_and_append(0, self), condition_synergy)
+            graph, instance.copy_and_append(self, increment_score=False), condition_synergy)
 
         assert len(condition_synergy.by_predicate) <= 1
 
+        new_instances: List[Synergy.Instance] = []
         for condition_instances in condition_synergy.by_predicate.values():
             for condition_instance in condition_instances:
-                self.result.traverse(graph, condition_instance, out_synergy)
+                new_instances.extend(
+                    self.result.traverse(graph, condition_instance, out_synergy))
+
+        return new_instances
 
     def _stringify(self, indentation: int) -> str:
         s = (indentation * "\t") + "<<IF>\n"

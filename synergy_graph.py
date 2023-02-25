@@ -8,8 +8,8 @@ from subject import Subject
 
 
 class SynonymFilter(IntEnum):
-    INPUT = 0
-    OUTPUT = 1
+    IS = 0
+    OTHERS_ARE = 1
 
 
 class IPredicate:
@@ -23,14 +23,20 @@ class IPredicate:
 
         return predicate
 
-    def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
+    def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
+        new_instances: List[Synergy.Instance] = []
         if not instance.predicate_visited(self):
-            self._traverse(graph, instance, out_synergy)
+            new_instances = self._traverse(graph, instance, out_synergy)
+
+        for new_instance in new_instances:
+            out_synergy.add(new_instance)
+
+        return new_instances
 
     def stringify(self, indentation: int):
         s = self._stringify(indentation)
         if self.derived_from is not None:
-            s = f"{s} <<DF> ({self.derived_from.stringify(indentation)})>"
+            s = f"{s} (<DF> {self.derived_from.stringify(indentation)})"
 
         return s
 
@@ -43,7 +49,7 @@ class IPredicate:
     def tails(self) -> Set[Subject]:
         raise NotImplementedError(type(self))
 
-    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
         raise NotImplementedError(type(self))
 
     def _stringify(self, indentation: int) -> str:
@@ -78,11 +84,11 @@ class Synergy:
         def predicate_visited(self, predicate: IPredicate) -> bool:
             return predicate in self.visited
 
-        def copy_and_append(self, score: int, predicate: IPredicate) -> Synergy.Instance:
+        def copy_and_append(self, predicate: IPredicate, increment_score: bool = True) -> Synergy.Instance:
             predicates = list(self.predicates)
             predicates.append(predicate)
 
-            copy = Synergy.Instance(self.score + score, predicates)
+            copy = Synergy.Instance(self.score + increment_score, predicates)
             return copy
 
         def __repr__(self) -> str:
@@ -186,9 +192,9 @@ class SynergyGraph:
 
     def get_synonyms(self, subject: Subject, filter: SynonymFilter) -> Set[Subject]:
         node = self.get_subject_node(subject)
-        if filter == SynonymFilter.INPUT:
+        if filter == SynonymFilter.IS:
             synonyms_src = node.synonyms_in
-        elif filter == SynonymFilter.OUTPUT:
+        elif filter == SynonymFilter.OTHERS_ARE:
             synonyms_src = node.synonyms_out
 
         synonyms: Set[Subject] = {subject}
@@ -214,6 +220,13 @@ class SynergyGraph:
             self.subjects[subject] = SynergyGraph.SubjectNode()
 
         return self.subjects[subject]
+
+    def all_synergies(self) -> Synergy:
+        synergy = Synergy()
+        for subject in self.subjects.keys():
+            synergy.extend(self.synergies(subject))
+
+        return synergy
 
     def synergies(self, subject: Subject) -> Synergy:
         synergy = Synergy()
