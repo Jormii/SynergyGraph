@@ -1,11 +1,221 @@
 from __future__ import annotations
-
 import math
 from typing import List, Set
 
 from action import Action
 from subject import Subject
 from synergy_graph import IPredicate, SynonymFilter, Synergy, SynergyGraph
+
+
+class Execute(IPredicate):
+
+    def __init__(self, actor: Subject, action: Action, objective: Subject, annotation: str = "") -> None:
+        super().__init__(annotation)
+
+        self.actor = actor
+        self.action = action
+        self.objective = objective
+
+    def actors(self) -> Set[Subject]:
+        return {self.actor}
+
+    def objectives(self) -> Set[Subject]:
+        return {self.objective}
+
+    def actions(self) -> Set[Action]:
+        return {self.action}
+
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
+        new_instances: List[Synergy.Instance] = []
+        synonyms = graph.get_synonyms(self.objective, SynonymFilter.IS)
+        for synonym in synonyms:
+            predicate = self.derivative(
+                Execute(self.actor, self.action, synonym))
+            new_instances.append(instance.copy_and_append(predicate))
+
+        return new_instances
+
+    def _equals(self, execute: Execute) -> bool:
+        return self.actor == execute.actor \
+            and self.action == execute.action \
+            and self.objective == execute.objective
+
+    def _hash(self) -> int:
+        return hash((self.actor, self.action, self.objective))
+
+    def _stringify(self, indentation: int) -> str:
+        return f"{self._indent(indentation)}<EXE> {self.action}({self.actor}, {self.objective})"
+
+
+class Witness(IPredicate):
+
+    def __init__(self, witness: Subject, actor: Subject, performing: Action, annotation: str = "") -> None:
+        super().__init__(annotation)
+
+        self.witness = witness
+        self.actor = actor
+        self.performing = performing
+
+    def actors(self) -> Set[Subject]:
+        return {self.witness}
+
+    def objectives(self) -> Set[Subject]:
+        return set()
+
+    def actions(self) -> Set[Action]:
+        return {self.performing}
+
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
+        new_instances: List[Synergy.Instance] = []
+        inputs = graph.get_action_inputs(self.witnesses)
+        for input in inputs:
+            if not instance.predicate_visited(input) and self.on in input.tails():
+                new_instances.append(
+                    instance.copy_and_append(input, increment_score=False))
+
+        return new_instances
+
+    def _equals(self, predicate: Witness) -> bool:
+        return self.witness == predicate.witness \
+            and self.actor == predicate.actor \
+            and self.performing == predicate.performing
+
+    def _hash(self) -> int:
+        return hash((self.witness, self.actor, self.performing))
+
+    def _stringify(self, indentation: int) -> str:
+        return f"{self._indent(indentation)}<SEE> {self.performing}({self.witness}, {self.actor})"
+
+
+class Conditional(IPredicate):
+
+    def __init__(self, event: IPredicate, outcome: IPredicate, annotation: str = "") -> None:
+        super().__init__(annotation)
+
+        self.event = event
+        self.outcome = outcome
+
+    def actors(self) -> Set[Subject]:
+        return self.event.actors()
+
+    def objectives(self) -> Set[Subject]:
+        return self.outcome.objectives()
+
+    def actions(self) -> Set[Action]:
+        return self.event.actions().union(self.outcome.actions())
+
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
+        event_synergy = Synergy()
+        self.event.traverse(
+            graph, instance.copy_and_append(self, increment_score=False), event_synergy)
+
+        assert len(event_synergy.synergies) <= 1
+
+        new_instances: List[Synergy.Instance] = []
+        for event_instances in event_synergy.synergies.values():
+            for event_instance in event_instances:
+                new_instances.extend(
+                    self.outcome.traverse(graph, event_instance, out_synergy))
+
+        return new_instances
+
+    def _equals(self, predicate: Conditional) -> bool:
+        return self.event == predicate.event \
+            and self.outcome == predicate.outcome
+
+    def _hash(self) -> int:
+        return hash((self.event, self.outcome))
+
+    def _stringify(self, indentation: int) -> str:
+        s = f"{self._indent(indentation)}<<IF>\n"
+        s += f"{self.event.stringify(indentation + 1)}\n"
+        s += f"{self._indent(indentation)}<THEN>\n"
+        s += f"{self.outcome.stringify(indentation + 1)}\n"
+        s += f"{self._indent(indentation)}>"
+
+        return s
+
+
+class Multiplier(IPredicate):
+
+    def __init__(self, predicate: IPredicate, factor: float, annotation: str = "") -> None:
+        super().__init__(annotation)
+
+        self.predicate = predicate
+        self.factor = factor
+
+    def actors(self) -> Set[Subject]:
+        return self.predicate.actors()
+
+    def objectives(self) -> Set[Subject]:
+        return self.predicate.objectives()
+
+    def actions(self) -> Set[Action]:
+        return self.predicate.actions()
+
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
+        new_instances = self.predicate.traverse(graph, instance, out_synergy)
+        for new_instance in new_instances:
+            new_instance.score *= self.factor
+
+        return new_instances
+
+    def _equals(self, predicate: Multiplier) -> bool:
+        return self.predicate == predicate.predicate \
+            and math.isclose(self.factor, predicate.factor)
+
+    def _hash(self) -> int:
+        return hash((self.predicate, self.factor))
+
+    def _stringify(self, indentation: int) -> str:
+        s = f"{self._indent(indentation)}<<MULT>\n"
+        s += f"{self._indent(indentation + 1)}{self.factor:.2f}x\n"
+        s += f"{self.predicate.stringify(indentation + 1)}\n"
+        s += f"{self._indent(indentation)}>"
+
+        return s
+
+
+class Repeat(IPredicate):
+
+    def __init__(self, predicate: IPredicate, times: int, annotation: str = "") -> None:
+        super().__init__(annotation)
+
+        self.predicate = predicate
+        self.times = times
+
+    def actors(self) -> Set[Subject]:
+        return self.predicate.actors()
+
+    def objectives(self) -> Set[Subject]:
+        return self.predicate.objectives()
+
+    def actions(self) -> Set[Action]:
+        return self.predicate.actions()
+
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
+        new_instances = self.predicate.traverse(
+            graph, instance.copy_and_append(self, increment_score=False), out_synergy)
+
+        for new_instance in new_instances:
+            new_instance.score *= self.times
+
+        return new_instances
+
+    def _equals(self, predicate: Repeat) -> bool:
+        return self.predicate == predicate.predicate \
+            and self.times == predicate.times
+
+    def _hash(self) -> int:
+        return hash((self.predicate, self.times))
+
+    def _stringify(self, indentation: int) -> str:
+        s = f"{self._indent(indentation)}<<REPEAT>\n"
+        s += f"{self._indent(indentation + 1)}{self.times:.2f} TIMES \n"
+        s += f"{self.predicate.stringify(indentation + 1)}\n"
+        s += f"{self._indent(indentation)}>"
+
+        return s
 
 
 class Chain(IPredicate):
@@ -15,12 +225,19 @@ class Chain(IPredicate):
 
         self.predicates = predicates
 
-    def roots(self) -> Set[Subject]:
-        roots: Set[Subject] = set()
+    def actors(self) -> Set[Subject]:
+        actors: Set[Subject] = set()
         for predicate in self.predicates:
-            roots.update(predicate.roots())
+            actors.update(predicate.actors())
 
-        return roots
+        return actors
+
+    def objectives(self) -> Set[Subject]:
+        objectives: Set[Subject] = set()
+        for predicate in self.predicates:
+            objectives.update(predicate.objectives())
+
+        return objectives
 
     def actions(self) -> Set[Action]:
         actions: Set[Action] = set()
@@ -28,13 +245,6 @@ class Chain(IPredicate):
             actions.update(predicate.actions())
 
         return actions
-
-    def tails(self) -> Set[Subject]:
-        tails: Set[Subject] = set()
-        for predicate in self.predicates:
-            tails.update(predicate.tails())
-
-        return tails
 
     def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
         tmp: List[Synergy.Instance] = []
@@ -52,223 +262,16 @@ class Chain(IPredicate):
 
         return new_instances
 
+    def _equals(self, predicate: Chain) -> bool:
+        return self.predicates == predicate.predicates
+
+    def _hash(self) -> int:
+        return hash(tuple(self.predicates))
+
     def _stringify(self, indentation: int = 0) -> str:
-        s = (indentation * "\t") + f"<<CHAIN> [\n"
+        s = f"{self._indent(indentation)}<<CHAIN> [\n"
         for predicate in self.predicates:
             s += f"{predicate.stringify(indentation + 1)}\n"
-        s += (indentation * "\t") + "]>"
+        s += f"{self._indent(indentation)}]>"
 
         return s
-
-
-class Repeat(IPredicate):
-
-    def __init__(self, predicate: IPredicate, times: int, annotation: str = "") -> None:
-        super().__init__(annotation)
-
-        self.predicate = predicate
-        self.times = times
-
-    def roots(self) -> Set[Subject]:
-        return self.predicate.roots()
-
-    def actions(self) -> Set[Action]:
-        return self.predicate.actions()
-
-    def tails(self) -> Set[Subject]:
-        return self.predicate.tails()
-
-    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
-        new_instances = self.predicate.traverse(
-            graph,
-            instance.copy_and_append(self, increment_score=False),
-            out_synergy
-        )
-
-        for new_instance in new_instances:
-            new_instance.score *= self.times
-
-        return new_instances
-
-    def _stringify(self, indentation: int) -> str:
-        s = (indentation * "\t") + "<<REPEAT>\n"
-        s += ((indentation + 1) * "\t") + f"{self.times:.2f} TIMES \n"
-        s += f"{self.predicate.stringify(indentation + 1)}\n"
-        s += (indentation * "\t") + ">"
-
-        return s
-
-
-class Execute(IPredicate):
-
-    def __init__(self, subject: Subject, executes: Action, on: Subject, annotation: str = "") -> None:
-        super().__init__(annotation)
-
-        self.subject = subject
-        self.executes = executes
-        self.on = on
-
-    def roots(self) -> Set[Subject]:
-        return {self.subject}
-
-    def actions(self) -> Set[Action]:
-        return {self.executes}
-
-    def tails(self) -> Set[Subject]:
-        return {self.on}
-
-    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
-        new_instances: List[Synergy.Instance] = []
-        synonyms = graph.get_synonyms(self.on, SynonymFilter.IS)
-        for synonym in synonyms:
-            predicate = self.derivative(
-                Execute(self.subject, self.executes, synonym))
-            new_instances.append(instance.copy_and_append(predicate))
-
-        return new_instances
-
-    def _stringify(self, indentation: int) -> str:
-        return (indentation * "\t") + f"<EXE> {self.executes}({self.subject}, {self.on})"
-
-    def __eq__(self, __o: object) -> bool:
-        if not isinstance(__o, Execute):
-            return False
-
-        return self.subject == __o.subject and \
-            self.executes == __o.executes and \
-            self.on == __o.on
-
-    def __hash__(self) -> int:
-        return hash((self.subject, self.executes, self.on))
-
-
-class Witness(IPredicate):
-
-    def __init__(self, subject: Subject, witnesses: Action, on: Subject, annotation: str = "") -> None:
-        super().__init__(annotation)
-
-        self.subject = subject
-        self.witnesses = witnesses
-        self.on = on
-
-    def roots(self) -> Set[Subject]:
-        return {self.subject}
-
-    def actions(self) -> Set[Action]:
-        return {self.witnesses}
-
-    def tails(self) -> Set[Subject]:
-        return set()
-
-    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
-        new_instances: List[Synergy.Instance] = []
-        inputs = graph.get_action_inputs(self.witnesses)
-        for input in inputs:
-            if not instance.predicate_visited(input) and self.on in input.tails():
-                new_instances.append(
-                    instance.copy_and_append(input, increment_score=False))
-
-        return new_instances
-
-    def _stringify(self, indentation: int) -> str:
-        return (indentation * "\t") + f"<SEE> {self.witnesses}({self.subject}, {self.on})"
-
-    def equal(self, predicate: Witness) -> bool:
-        return self.subject == predicate.subject and \
-            self.witnesses == predicate.witnesses and \
-            self.on == predicate.on
-
-    def __hash__(self) -> int:
-        return hash((self.subject, self.witnesses, self.on))
-
-
-class Multiplier(IPredicate):
-
-    def __init__(self, predicate: IPredicate, factor: float = 1, annotation: str = "") -> None:
-        super().__init__(annotation)
-
-        self.predicate = predicate
-        self.factor = factor
-
-    def roots(self) -> Set[Subject]:
-        return self.predicate.roots()
-
-    def actions(self) -> Set[Action]:
-        return self.predicate.actions()
-
-    def tails(self) -> Set[Subject]:
-        return self.predicate.tails()
-
-    def equal(self, predicate: Multiplier) -> bool:
-        return self.predicate == predicate.predicate and \
-            math.isclose(self.factor, predicate.factor)
-
-    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> None:
-        new_instances = self.predicate.traverse(graph, instance, out_synergy)
-        for new_instance in new_instances:
-            new_instance.score *= self.factor
-
-        return new_instances
-
-    def _stringify(self, indentation: int) -> str:
-        s = (indentation * "\t") + "<<MULT>\n"
-        s += ((indentation + 1) * "\t") + f"{self.factor:.2f}x\n"
-        s += f"{self.predicate.stringify(indentation + 1)}\n"
-        s += (indentation * "\t") + ">"
-
-        return s
-
-    def __hash__(self) -> int:
-        return hash((self.predicate, self.factor))
-
-
-class Conditional(IPredicate):
-
-    def __init__(self, condition: IPredicate, result: IPredicate, annotation: str = "") -> None:
-        super().__init__(annotation)
-
-        self.condition = condition
-        self.result = result
-
-    def roots(self) -> Set[Subject]:
-        return self.condition.roots()
-
-    def actions(self) -> Set[Action]:
-        c_actions = self.condition.actions()
-        r_actions = self.result.actions()
-
-        return c_actions.union(r_actions)
-
-    def tails(self) -> Set[Subject]:
-        return self.result.tails()
-
-    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
-        condition_synergy = Synergy()
-        self.condition.traverse(
-            graph, instance.copy_and_append(self, increment_score=False), condition_synergy)
-
-        assert len(condition_synergy.by_predicate) <= 1
-
-        new_instances: List[Synergy.Instance] = []
-        for condition_instances in condition_synergy.by_predicate.values():
-            for condition_instance in condition_instances:
-                new_instances.extend(
-                    self.result.traverse(graph, condition_instance, out_synergy))
-
-        return new_instances
-
-    def _stringify(self, indentation: int) -> str:
-        s = (indentation * "\t") + "<<IF>\n"
-        s += f"{self.condition.stringify(indentation + 1)}\n"
-        s += (indentation * "\t") + "<THEN>\n"
-        s += f"{self.result.stringify(indentation + 1)}\n"
-        s += (indentation * "\t") + ">"
-
-        return s
-
-    def equal(self, predicate: Conditional) -> bool:
-        return self.condition == predicate.condition and \
-            self.result == predicate.result
-
-    def __hash__(self) -> int:
-        return hash((self.condition, self.result))

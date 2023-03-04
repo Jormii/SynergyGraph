@@ -1,10 +1,11 @@
 from __future__ import annotations
-
 from enum import IntEnum
 from typing import Dict, List, Set, Union
 
 from action import Action
 from subject import Subject
+
+INDENT_SIZE = 4
 
 
 class SynonymFilter(IntEnum):
@@ -15,13 +16,13 @@ class SynonymFilter(IntEnum):
 class IPredicate:
 
     def __init__(self, annotation: str) -> None:
-        self.annontation = annotation
+        self.annotation = annotation
         self.derived_from: IPredicate = None
 
     def derivative(self, predicate: IPredicate) -> IPredicate:
-        if type(self) == type(predicate) and self != predicate:
-            predicate.derived_from = self
+        assert type(self) == type(predicate) and self != predicate
 
+        predicate.derived_from = self
         return predicate
 
     def traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
@@ -36,8 +37,8 @@ class IPredicate:
 
     def stringify(self, indentation: int):
         s = ""
-        if len(self.annontation) != 0:
-            s += (indentation * "\t") + f"\"{self.annontation}\"\n"
+        if len(self.annotation) != 0:
+            s += f"{self._indent(indentation)}\"{self.annotation}\"\n"
 
         s += self._stringify(indentation)
         if self.derived_from is not None:
@@ -45,20 +46,44 @@ class IPredicate:
 
         return s
 
-    def roots(self) -> Set[Subject]:
+    def _get(self) -> IPredicate:
+        if self.derived_from is None:
+            return self
+        else:
+            return self.derived_from
+
+    def _indent(self, indentation: int) -> str:
+        return indentation * (INDENT_SIZE * " ")
+
+    def actors(self) -> Set[Subject]:
+        raise NotImplementedError(type(self))
+
+    def objectives(self) -> Set[Subject]:
         raise NotImplementedError(type(self))
 
     def actions(self) -> Set[Action]:
         raise NotImplementedError(type(self))
 
-    def tails(self) -> Set[Subject]:
+    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
         raise NotImplementedError(type(self))
 
-    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
+    def _equals(self, predicate: IPredicate) -> bool:
+        raise NotImplementedError(type(self))
+
+    def _hash(self) -> int:
         raise NotImplementedError(type(self))
 
     def _stringify(self, indentation: int) -> str:
         raise NotImplementedError(type(self))
+
+    def __eq__(self, __o: object) -> bool:
+        if isinstance(__o, type(self)):
+            return self._get()._equals(__o._get())
+        else:
+            return False
+
+    def __hash__(self) -> int:
+        return self._get()._hash()
 
     def __repr__(self) -> str:
         return self.stringify(0)
@@ -75,10 +100,6 @@ class Synergy:
             self.score = score
             self.predicates: List[IPredicate] = predicates
             self.visited: Set[IPredicate] = set(self.predicates)
-
-        @staticmethod
-        def root() -> Synergy.Instance:
-            return Synergy.Instance(0, [])
 
         def root_predicate(self) -> IPredicate:
             return self.predicates[0]
@@ -99,73 +120,36 @@ class Synergy:
         def __repr__(self) -> str:
             s = f"SCORE: {self.score:.2f}, [\n"
             for predicate in self.predicates:
-                s += f"\t{predicate}\n"
+                s += f"{INDENT_SIZE * ' '}{predicate}\n"
 
             s += "]"
 
             return s
 
+        def root_instance() -> Synergy.Instance:
+            return Synergy.Instance(0, [])
+
     def __init__(self) -> None:
-        self.by_performer: Dict[Subject, List[Synergy.Instance]] = {}
-        self.by_beneficiary: Dict[Subject, List[Synergy.Instance]] = {}
-        self.by_predicate: Dict[IPredicate, List[Synergy.Instance]] = {}
+        self.synergies: Dict[IPredicate, List[Synergy.Instance]] = {}
 
     def add(self, instance: Synergy.Instance) -> None:
         predicate = instance.root_predicate()
 
-        for root in predicate.roots():
-            if root not in self.by_performer:
-                self.by_performer[root] = []
-
-            self.by_performer[root].append(instance)
-
-        for tail in predicate.tails():
-            if tail not in self.by_beneficiary:
-                self.by_beneficiary[tail] = []
-
-            self.by_beneficiary[tail].append(instance)
-
-        if predicate not in self.by_predicate:
-            self.by_predicate[predicate] = []
-        self.by_predicate[predicate].append(instance)
+        if predicate not in self.synergies:
+            self.synergies[predicate] = []
+        self.synergies[predicate].append(instance)
 
     def extend(self, synergy: Synergy) -> None:
-        for subject, predicates in synergy.by_performer.items():
-            if subject not in self.by_performer:
-                self.by_performer[subject] = list(predicates)
-            else:
-                self.by_performer[subject].extend(predicates)
-
-        for subject, predicates in synergy.by_beneficiary.items():
-            if subject not in self.by_beneficiary:
-                self.by_beneficiary[subject] = list(predicates)
-            else:
-                self.by_beneficiary[subject].extend(predicates)
-
-        for predicate, predicates in synergy.by_predicate.items():
-            if predicate not in self.by_predicate:
-                self.by_predicate[predicate] = list(predicates)
-            else:
-                self.by_predicate[predicate].extend(predicates)
+        for instances in synergy.synergies.values():
+            for instance in instances:
+                self.add(instance)
 
     def __repr__(self) -> str:
-        s = "Synergies by performer\n"
-        for subject, synergies in self.by_performer.items():
-            s += f"- {subject}\n"
-            for synergy in synergies:
-                s += f"-- {synergy}\n"
-
-        s += "\nSynergies by beneficiary\n"
-        for subject, synergies in self.by_beneficiary.items():
-            s += f"- {subject}\n"
-            for synergy in synergies:
-                s += f"-- {synergy}\n"
-
-        s += "\nSynergies by predicate\n"
-        for predicate, synergies in self.by_predicate.items():
+        s = "----- Synergies -----\n"
+        for predicate, instances in self.synergies.items():
             s += f"- {predicate}\n"
-            for synergy in synergies:
-                s += f"-- {synergy}\n"
+            for instance in instances:
+                s += f"-- {instance}\n"
 
         return s
 
@@ -184,13 +168,13 @@ class SynergyGraph:
         self.subjects: Dict[Subject, SynergyGraph.SubjectNode] = {}
 
     def add_synonym(self, subject: Subject, is_a: Subject) -> None:
-        if subject is not is_a:
+        if subject != is_a:
             self.get_subject_node(subject).synonyms_out.add(is_a)
             self.get_subject_node(is_a).synonyms_in.add(subject)
 
     def add_predicate(self, predicate: IPredicate) -> None:
-        for root in predicate.roots():
-            self.get_subject_node(root).predicates.add(predicate)
+        for actor in predicate.actors():
+            self.get_subject_node(actor).predicates.add(predicate)
 
         for action in predicate.actions():
             self.get_action_inputs(action).add(predicate)
