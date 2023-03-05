@@ -9,10 +9,20 @@ from synergy_graph import IPredicate
 class Leaper(Subject):
 
     class Class(IntEnum):
-        PASS = 0
+        TANK = 0
+        FIGHTER = 1
+        ASSASIN = 2
+        HUNTER = 3
+        MAGE = 4
+        SUPPORT = 5
 
     class Element(IntEnum):
-        PASS = 0
+        STONE = 0
+        LIQUID = 1
+        FLAME = 2
+        WIND = 3
+        ORDER = 4
+        CHAOS = 5
 
     class EnergyOrb(IntEnum):
         ONE = 1

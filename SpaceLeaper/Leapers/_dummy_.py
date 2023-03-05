@@ -1,10 +1,10 @@
 from predicates import *
 from synergy_graph import IPredicate
 
-from SpaceLeaper.actions import *
-from SpaceLeaper.subjects import *
 from SpaceLeaper.predicates import *
 from SpaceLeaper.leaper import Leaper
+from SpaceLeaper.actions import Actions
+from SpaceLeaper.subjects import Subjects
 
 
 class ___LEAPERS_NAME___(Leaper):
@@ -12,9 +12,9 @@ class ___LEAPERS_NAME___(Leaper):
     def __init__(self) -> None:
         super().__init__(
             self.__class__.name,
-            Leaper.Class.PASS,
-            Leaper.Element.PASS,
-            Leaper.EnergyOrb.ONE
+            Leaper.Class.__CLASS__,
+            Leaper.Element.__ELEMENT__,
+            Leaper.EnergyOrb.__ORBS__
         )
 
     def basic_attack(self) -> IPredicate:

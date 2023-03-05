@@ -1,3 +1,6 @@
 from action import Action
 
-CAST = Action("Cast")
+
+class Actions:
+
+    CAST = Action("Cast")
