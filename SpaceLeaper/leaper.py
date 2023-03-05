@@ -1,32 +1,61 @@
+from __future__ import annotations
+from enum import IntEnum
+from typing import Callable, Dict
+
 from subject import Subject
-from synergy_graph import SynergyGraph
+from synergy_graph import IPredicate
 
 
 class Leaper(Subject):
 
-    def add_to_graph(self, graph: SynergyGraph, add_ex_skills: bool = False) -> None:
-        self._add_basic_attack(graph)
-        self._add_talent(graph)
-        self._add_character_gear(graph)
-        self._add_energy_skill(graph)
-        self._add_ultra_skill(graph)
-        if add_ex_skills:
-            self._add_ex_skill(graph)
+    class Class(IntEnum):
+        PASS = 0
 
-    def _add_basic_attack(self, graph: SynergyGraph) -> None:
-        raise NotImplementedError(f"{type(self)}")
+    class Element(IntEnum):
+        PASS = 0
 
-    def _add_talent(self, graph: SynergyGraph) -> None:
-        raise NotImplementedError(f"{type(self)}")
+    class EnergyOrb(IntEnum):
+        ONE = 1
+        TWO = 2
+        THREE = 3
 
-    def _add_character_gear(self, graph: SynergyGraph) -> None:
-        raise NotImplementedError(f"{type(self)}")
+    class Skill(IntEnum):
+        BASIC_ATTACK = 0
+        TALENT = 1
+        CHARACTER_GEAR = 2
+        ENERGY_SKILL = 3
+        ULTRA_SKILL = 4
 
-    def _add_energy_skill(self, graph: SynergyGraph) -> None:
-        raise NotImplementedError(f"{type(self)}")
+    def __init__(self, name: str, leaper_class: Leaper.Class, leaper_element: Leaper.Element,
+                 energy_orbs: Leaper.EnergyOrb) -> None:
+        super().__init__(name)
 
-    def _add_ultra_skill(self, graph: SynergyGraph) -> None:
-        raise NotImplementedError(f"{type(self)}")
+        self.leaper_class = leaper_class
+        self.leaper_element = leaper_element
+        self.energy_orbs = energy_orbs
 
-    def _add_ex_skill(self, graph: SynergyGraph) -> None:
-        raise NotImplementedError(f"{type(self)}")
+    def skills_predicate(self, skill: Leaper.Skill) -> IPredicate:
+        MAPPING: Dict[Leaper.Skill, Callable[[Leaper], IPredicate]] = {
+            Leaper.Skill.BASIC_ATTACK: self.basic_attack,
+            Leaper.Skill.TALENT: self.talent,
+            Leaper.Skill.CHARACTER_GEAR: self.character_gear,
+            Leaper.Skill.ENERGY_SKILL: self.energy_skill,
+            Leaper.Skill.ULTRA_SKILL: self.ultra_skill
+        }
+
+        return MAPPING[skill]()
+
+    def basic_attack(self) -> IPredicate:
+        raise NotImplementedError(type(self))
+
+    def talent(self) -> IPredicate:
+        raise NotImplementedError(type(self))
+
+    def character_gear(self) -> IPredicate:
+        raise NotImplementedError(type(self))
+
+    def energy_skill(self) -> IPredicate:
+        raise NotImplementedError(type(self))
+
+    def ultra_skill(self) -> IPredicate:
+        raise NotImplementedError(type(self))
