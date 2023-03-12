@@ -1,5 +1,6 @@
 from typing import List
 
+from predicates import Chain
 from synergy_graph import SynergyGraph
 
 from SpaceLeaper.leaper import Leaper
@@ -37,10 +38,13 @@ def create_synergy_graph() -> SynergyGraph:
 
         graph.add_synonym(leaper, Subjects.ALLY)
         for skill in Leaper.Skill:
-            predicate = SkillCast.predicate(leaper, skill)
-            predicate.annotation = f"{leaper.name}'s {skill.name}"
-
-            graph.add_predicate(predicate)
+            graph.add_predicate(Chain(
+                [
+                    SkillCast(leaper, skill),
+                    leaper.skills_predicate(skill)
+                ],
+                annotation=f"{leaper.name}'s {skill.name}"
+            ))
 
     # Is-a-relationships
 

@@ -1,7 +1,8 @@
 from __future__ import annotations
-from enum import IntEnum
+from enum import IntEnum, auto
 from typing import Callable, Dict
 
+from action import Action
 from subject import Subject
 from synergy_graph import IPredicate
 
@@ -9,20 +10,20 @@ from synergy_graph import IPredicate
 class Leaper(Subject):
 
     class Class(IntEnum):
-        TANK = 0
-        FIGHTER = 1
-        ASSASIN = 2
-        HUNTER = 3
-        MAGE = 4
-        SUPPORT = 5
+        TANK = auto()
+        FIGHTER = auto()
+        ASSASIN = auto()
+        HUNTER = auto()
+        MAGE = auto()
+        SUPPORT = auto()
 
     class Element(IntEnum):
-        STONE = 0
-        LIQUID = 1
-        FLAME = 2
-        WIND = 3
-        ORDER = 4
-        CHAOS = 5
+        STONE = auto()
+        LIQUID = auto()
+        FLAME = auto()
+        WIND = auto()
+        ORDER = auto()
+        CHAOS = auto()
 
     class EnergyOrb(IntEnum):
         ONE = 1
@@ -30,11 +31,43 @@ class Leaper(Subject):
         THREE = 3
 
     class Skill(IntEnum):
-        BASIC_ATTACK = 0
-        TALENT = 1
-        CHARACTER_GEAR = 2
-        ENERGY_SKILL = 3
-        ULTRA_SKILL = 4
+        BASIC_ATTACK = auto()
+        TALENT = auto()
+        CHARACTER_GEAR = auto()
+        ENERGY_SKILL = auto()
+        ULTRA_SKILL = auto()
+
+    class DamageType(IntEnum):
+        PHYSICAL = auto()
+        ENERGY = auto()
+        TRUE = auto()
+
+        def action(self) -> Action:
+            return Action(f"DealDMG_T[{self.name}]")
+
+    class DamageArea(IntEnum):
+        SINGLE = auto()
+        AOE = auto()
+
+        def action(self) -> Action:
+            return Action(f"DealDMG_A[{self.name}]")
+
+    class Stat(IntEnum):
+        ACCURACY = auto()
+
+        def action(self) -> Action:
+            return Action(f"ModifyStat[{self.name}]")
+
+    class StatModification(IntEnum):
+        DECREASE = auto()
+        INCREASE = auto()
+
+    class Condition(IntEnum):
+        BLIND = auto()
+        STUN = auto()
+
+        def action(self) -> Action:
+            return Action(f"Apply[{self.name}]")
 
     def __init__(self, name: str, leaper_class: Leaper.Class, leaper_element: Leaper.Element,
                  energy_orbs: Leaper.EnergyOrb) -> None:
