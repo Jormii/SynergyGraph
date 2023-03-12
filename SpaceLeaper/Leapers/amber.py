@@ -18,16 +18,53 @@ class Amber(Leaper):
         )
 
     def basic_attack(self) -> IPredicate:
-        return DealDamage.predicate(self, Subjects.ENEMY, DealDamage.Type.PHYSICAL, 75)
+        return DealDamage(
+            self, Subjects.ENEMY, Leaper.DamageType.PHYSICAL, Leaper.DamageArea.SINGLE, 75)
 
     def talent(self) -> IPredicate:
-        return Execute(self, Actions.CAST, self)
+        return Conditional(
+            Execute(Subjects.ENEMY, Actions.ATTACK, self),
+            Duration(
+                ModifyStat(
+                    self, Subjects.ENEMY, Leaper.Stat.ACCURACY, Leaper.StatModification.DECREASE, 35),
+                5, cooldown=8
+            )
+        )
 
     def character_gear(self) -> IPredicate:
-        return Execute(self, Actions.CAST, self)
+        return Conditional(
+            Execute(self, Actions.ATTACK, Subjects.ENEMY),
+            Chance(
+                Chain([
+                    DealDamage(
+                        self, Subjects.ENEMY, Leaper.DamageType.PHYSICAL, Leaper.DamageArea.SINGLE, 220),
+                    Duration(
+                        ApplyCondition(
+                            self, Subjects.ENEMY, Leaper.Condition.BLIND),
+                        3
+                    )
+                ]),
+                20
+            )
+        )
 
     def energy_skill(self) -> IPredicate:
-        return Execute(self, Actions.CAST, self)
+        return Duration(
+            DealDamage(
+                self, Subjects.ENEMY, Leaper.DamageType.PHYSICAL, Leaper.DamageArea.AOE, 47),
+            5
+        )
 
     def ultra_skill(self) -> IPredicate:
-        return Execute(self, Actions.CAST, self)
+        return Duration(
+            Chain([
+                DealDamage(
+                    self, Subjects.ENEMY, Leaper.DamageType.PHYSICAL, Leaper.DamageArea.SINGLE, 95),
+                Chance(
+                    ApplyCondition(
+                        self, Subjects.ENEMY, Leaper.Condition.STUN),
+                    35
+                )
+            ]),
+            2.1, tick=0.3
+        )
