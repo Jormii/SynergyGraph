@@ -47,46 +47,6 @@ class Execute(IPredicate):
         return f"{self._indent(indentation)}<EXE> {self.action}({self.actor}, {self.objective})"
 
 
-class Witness(IPredicate):
-
-    def __init__(self, witness: Subject, actor: Subject, performing: Action, annotation: str = "") -> None:
-        super().__init__(annotation)
-
-        self.witness = witness
-        self.actor = actor
-        self.performing = performing
-
-    def actors(self) -> Set[Subject]:
-        return {self.witness}
-
-    def objectives(self) -> Set[Subject]:
-        return set()
-
-    def actions(self) -> Set[Action]:
-        return {self.performing}
-
-    def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
-        new_instances: List[Synergy.Instance] = []
-        inputs = graph.get_action_inputs(self.witnesses)
-        for input in inputs:
-            if not instance.predicate_visited(input) and self.on in input.tails():
-                new_instances.append(
-                    instance.copy_and_append(input, increment_score=False))
-
-        return new_instances
-
-    def _equals(self, predicate: Witness) -> bool:
-        return self.witness == predicate.witness \
-            and self.actor == predicate.actor \
-            and self.performing == predicate.performing
-
-    def _hash(self) -> int:
-        return hash((self.witness, self.actor, self.performing))
-
-    def _stringify(self, indentation: int) -> str:
-        return f"{self._indent(indentation)}<SEE> {self.performing}({self.witness}, {self.actor})"
-
-
 class Conditional(IPredicate):
 
     def __init__(self, event: IPredicate, outcome: IPredicate, annotation: str = "") -> None:

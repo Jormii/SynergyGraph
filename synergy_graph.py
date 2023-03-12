@@ -1,5 +1,5 @@
 from __future__ import annotations
-from enum import IntEnum
+from enum import IntEnum, auto
 from typing import Dict, List, Set, Union
 
 from action import Action
@@ -9,8 +9,8 @@ INDENT_SIZE = 4
 
 
 class SynonymFilter(IntEnum):
-    IS = 0
-    OTHERS_ARE = 1
+    IS = auto()
+    OTHERS_ARE = auto()
 
 
 class IPredicate:
