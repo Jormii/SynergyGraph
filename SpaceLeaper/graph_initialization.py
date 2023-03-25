@@ -12,7 +12,8 @@ from SpaceLeaper.Leapers import (
     # Liquid
     # Flame
     Amber,
-    BeckySD
+    BeckySD,
+    Fai,
 
     # Wind
     # Order
@@ -24,7 +25,8 @@ LEAPERS: List[Leaper] = {
     # Liquid
     # Flame
     Amber.Amber(),
-    BeckySD.BeckySD()
+    BeckySD.BeckySD(),
+    Fai.Fai()
 
     # Wind
     # Order

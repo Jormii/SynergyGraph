@@ -36,3 +36,4 @@ class Subjects:
     ALLY = Subject("Ally")
     ALLY_HIGHEST_POWER = Subject("AllyHighestPower")
     ENEMY = Subject("Enemy")
+    ENEMIES = Subject("Enemies")
