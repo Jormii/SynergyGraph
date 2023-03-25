@@ -29,7 +29,7 @@ class Execute(IPredicate):
         new_instances: List[Synergy.Instance] = []
         synonyms = graph.get_synonyms(self.objective, SynonymFilter.IS)
         for synonym in synonyms:
-            predicate = self.derivative(
+            predicate = self.derive(
                 Execute(self.actor, self.action, synonym))
             new_instances.append(instance.copy_and_append(predicate))
 
@@ -65,6 +65,8 @@ class Conditional(IPredicate):
         return self.event.actions().union(self.outcome.actions())
 
     def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
+        return []   # TODO
+        
         event_synergy = Synergy()
         self.event.traverse(
             graph, instance.copy_and_append(self, increment_score=False), event_synergy)
@@ -171,7 +173,7 @@ class Repeat(IPredicate):
 
     def _stringify(self, indentation: int) -> str:
         s = f"{self._indent(indentation)}<<REPEAT>\n"
-        s += f"{self._indent(indentation + 1)}{self.times:.2f} TIMES \n"
+        s += f"{self._indent(indentation + 1)}{self.times} TIMES \n"
         s += f"{self.predicate.stringify(indentation + 1)}\n"
         s += f"{self._indent(indentation)}>"
 
@@ -208,10 +210,7 @@ class Chain(IPredicate):
 
     def _traverse(self, graph: SynergyGraph, instance: Synergy.Instance, out_synergy: Synergy) -> List[Synergy.Instance]:
         tmp: List[Synergy.Instance] = []
-        new_instances: List[Synergy.Instance] = [
-            instance.copy_and_append(self, increment_score=False)
-        ]
-
+        new_instances: List[Synergy.Instance] = [instance]
         for predicate in self.predicates:
             tmp = list(new_instances)
             new_instances.clear()
