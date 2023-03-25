@@ -11,7 +11,7 @@ class ___LEAPERS_NAME___(Leaper):
 
     def __init__(self) -> None:
         super().__init__(
-            self.__class__.name,
+            self.__class__.__name__,
             Leaper.Class.__CLASS__,
             Leaper.Element.__ELEMENT__,
             Leaper.EnergyOrb.__ORBS__

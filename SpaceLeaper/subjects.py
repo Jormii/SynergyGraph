@@ -13,7 +13,7 @@ def all_leapers_names() -> List[str]:
         path = os.path.join(leapers_dir, filename)
         if os.path.isfile(path):
             name, _ = os.path.splitext(filename)
-            names.append(name.capitalize())
+            names.append(name)
 
     return names
 
@@ -34,4 +34,5 @@ class Subjects:
 
     # Others
     ALLY = Subject("Ally")
+    ALLY_HIGHEST_POWER = Subject("AllyHighestPower")
     ENEMY = Subject("Enemy")

@@ -5,3 +5,4 @@ class Actions:
 
     CAST = Action("Cast")
     ATTACK = Action("Attack")
+    HEAL = Action("Heal")

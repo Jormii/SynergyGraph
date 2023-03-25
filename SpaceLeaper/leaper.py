@@ -53,7 +53,15 @@ class Leaper(Subject):
             return Action(f"DealDMG_A[{self.name}]")
 
     class Stat(IntEnum):
+        ENERGY = auto()
+        HEALTH = auto()
+        SHIELD = auto()
+        MAX_HEALTH = auto()
+
+        ATTACK = auto()
+
         ACCURACY = auto()
+        HEALTH_RECOVERY = auto()
 
         def action(self) -> Action:
             return Action(f"ModifyStat[{self.name}]")

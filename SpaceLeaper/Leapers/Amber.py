@@ -27,7 +27,7 @@ class Amber(Leaper):
             Duration(
                 ModifyStat(
                     self, Subjects.ENEMY, Leaper.Stat.ACCURACY, Leaper.StatModification.DECREASE, 35),
-                5, cooldown=8
+                5, None, 8
             )
         )
 
@@ -41,7 +41,7 @@ class Amber(Leaper):
                     Duration(
                         ApplyCondition(
                             self, Subjects.ENEMY, Leaper.Condition.BLIND),
-                        3
+                        3, None, None
                     )
                 ]),
                 20
@@ -52,7 +52,7 @@ class Amber(Leaper):
         return Duration(
             DealDamage(
                 self, Subjects.ENEMY, Leaper.DamageType.PHYSICAL, Leaper.DamageArea.AOE, 47),
-            5
+            5, 1, None
         )
 
     def ultra_skill(self) -> IPredicate:
@@ -66,5 +66,5 @@ class Amber(Leaper):
                     35
                 )
             ]),
-            2.1, tick=0.3
+            2.1, 0.3, None
         )

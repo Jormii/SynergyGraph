@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Union
 
 from predicates import *
 from action import Action
@@ -80,6 +81,25 @@ class SkillCast(SlPredicate):
             raise Exception(self.skill)
 
 
+class Heal(SlPredicate):
+
+    def __init__(self, actor: Subject, objective: Subject, scaling: int, scaling_stat: Leaper.Stat) -> None:
+        super().__init__(
+            f"{actor.name} heals {objective.name} for {scaling}% of its {scaling_stat.name}")
+
+        self.actor = actor
+        self.objective = objective
+        self.scaling = scaling
+        self.scaling_stat = scaling_stat
+
+    def _P(self) -> IPredicate:
+        return Chain([
+            Execute(self.actor, Actions.HEAL, self.objective),
+            ModifyStat(
+                self.actor, self.objective, Leaper.Stat.HEALTH, Leaper.StatModification.INCREASE, self.scaling)
+        ])
+
+
 class DealDamage(SlPredicate):
 
     def __init__(self, actor: Subject, objective: Subject, type: Leaper.DamageType,
@@ -151,14 +171,15 @@ class Chance(SlPredicate):
 
 class Duration(SlPredicate):
 
-    def __init__(self, predicate: IPredicate, duration: float, tick: float = 1, cooldown: float = None) -> None:
+    def __init__(self, predicate: IPredicate, duration: float, tick: Union[float, None], cooldown: Union[float, None]) -> None:
         super().__init__(
             f"Applies for {duration} seconds every {tick} seconds. CD: {cooldown}")
 
         self.predicate = predicate
         self.duration = duration
         self.tick = tick
-        self.cooldown = cooldown    # TODO
+        self.cooldown = cooldown
 
     def _P(self) -> IPredicate:
-        return Multiplier(self.predicate, self.duration / self.tick)    # TODO
+        chance = 1  # TODO
+        return Multiplier(self.predicate, chance)

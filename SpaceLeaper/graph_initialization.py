@@ -11,7 +11,8 @@ from SpaceLeaper.Leapers import (
     # Stone
     # Liquid
     # Flame
-    amber
+    Amber,
+    BeckySD
 
     # Wind
     # Order
@@ -22,7 +23,8 @@ LEAPERS: List[Leaper] = {
     # Stone
     # Liquid
     # Flame
-    amber.Amber()
+    Amber.Amber(),
+    BeckySD.BeckySD()
 
     # Wind
     # Order
@@ -47,5 +49,6 @@ def create_synergy_graph() -> SynergyGraph:
             ))
 
     # Is-a-relationships
+    graph.add_synonym(Subjects.ALLY_HIGHEST_POWER, Subjects.ALLY)
 
     return graph
